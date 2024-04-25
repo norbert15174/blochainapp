@@ -39,6 +39,7 @@ public class SecurityConfig {
             "/docs/**",
             "/api/v1/login",
             "/api/v1/refresh-token",
+            "/api/v1/register",
             "/v3/api-docs/**"
     };
 
