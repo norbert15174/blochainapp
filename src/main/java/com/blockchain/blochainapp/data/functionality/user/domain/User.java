@@ -31,6 +31,8 @@ public class User implements EntityId<Long> {
     private String email;
     private LocalDate createdAt = LocalDate.now();
     private boolean enabled;
+    private String walletAddress;
+    private String publicKey;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.MERGE)
     @JoinTable(

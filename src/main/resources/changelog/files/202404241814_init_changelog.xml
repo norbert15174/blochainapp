@@ -26,6 +26,10 @@
             <column name="created_at" type="DATE">
                 <constraints nullable="false"/>
             </column>
+            <column name="wallet_address" type="TEXT">
+            </column>
+            <column name="public_key" type="TEXT">
+            </column>
             <column name="enabled" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
