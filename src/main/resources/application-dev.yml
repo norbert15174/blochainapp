@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      schema: elikwidator
+    url: jdbc:postgresql://localhost:5432/elikwidator?currentSchema=public
+    username: elikwidator
+    password: elikwidator
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    database: postgresql
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  liquibase:
+    change-log: classpath:changelog/change-logs.xml
+
+server:
+  port: 9500
+
+jwt:
+  key: ${JWT_SIGNATURE}
+  access-token-expiration-time: 900000
+  refresh-token-expiration-time: 3600000
+  audience: http://localhost
+  issuer: http://localhost
+account:
+  salt: ${ACCOUNT_SALT}
+  pepper: ${ACCOUNT_PEPPER}
