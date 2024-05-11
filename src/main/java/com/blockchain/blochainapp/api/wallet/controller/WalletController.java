@@ -3,17 +3,17 @@ package com.blockchain.blochainapp.api.wallet.controller;
 import com.blockchain.blochainapp.api.wallet.model.TransactionRequest;
 import com.blockchain.blochainapp.api.wallet.model.WalletResponse;
 import com.blockchain.blochainapp.core.wallet.model.WalletEvent;
+import com.blockchain.blochainapp.core.wallet.model.WalletTransactions;
 import com.blockchain.blochainapp.core.wallet.service.WalletService;
 import com.blockchain.blochainapp.security.helper.UserHelper;
 import lombok.AllArgsConstructor;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Transaction;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Set;
+import java.util.List;
 
 @AllArgsConstructor
 @RestController
@@ -50,7 +50,7 @@ public class WalletController {
     }
 
     @GetMapping("/wallet/transactions")
-    public ResponseEntity<Set<Transaction>> getTransactions() {
+    public ResponseEntity<List<WalletTransactions>> getTransactions() {
         var user = UserHelper.getAuthenticatedUser();
         return ResponseEntity.ok(walletService.getTransactions(user.getUser()));
     }

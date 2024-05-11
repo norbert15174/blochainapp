@@ -4,6 +4,7 @@ package com.blockchain.blochainapp.core.wallet.service;
 import com.blockchain.blochainapp.api.wallet.model.WalletResponse;
 import com.blockchain.blochainapp.core.blockchain.config.BlockChainConfig;
 import com.blockchain.blochainapp.core.blockchain.model.BlockchainAppKit;
+import com.blockchain.blochainapp.core.wallet.model.WalletTransactions;
 import com.blockchain.blochainapp.data.functionality.user.domain.User;
 import com.blockchain.blochainapp.data.functionality.user.service.UserCudService;
 import com.google.common.util.concurrent.FutureCallback;
@@ -15,11 +16,10 @@ import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
+@SuppressWarnings("deprecation")
 @AllArgsConstructor
 @Component
 public class WalletServiceImpl implements WalletService {
@@ -81,42 +81,43 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public Set<Transaction> getTransactions(User user) {
+    public List<WalletTransactions> getTransactions(User user) {
         var walletAppKit = getBlockchainAppKit(user);
-        Set<Transaction> transactions = walletAppKit.wallet().getTransactions(false);
-        for(var x : transactions){
-            System.out.println(x.getFee());
-            System.out.println(x.getTxId().toString());
-            System.out.println(x.getInputs());
-            System.out.println(x.getOutputs());
-            for (TransactionInput input : x.getInputs()) {
-                TransactionOutPoint outPoint = input.getOutpoint();
-                Transaction prevTx = walletAppKit.wallet().getTransaction(outPoint.getHash());
-                if(Objects.isNull(prevTx)){
-                    continue;
-                }
-                TransactionOutput prevOutput = prevTx.getOutput(outPoint.getIndex());
+        var transactions = walletAppKit.wallet().getTransactions(false);
 
-                String fromAddress = prevOutput.getAddressFromP2PKHScript(walletAppKit.params()).toString();
-                System.out.println("Input from: " + fromAddress);
+        var walletTransactions = new ArrayList<WalletTransactions>();
+        for (var transaction : transactions) {
+            var transactionId = transaction.getTxId();
+            var fee = Objects.nonNull(transaction.getFee()) ? transaction.getFee().toFriendlyString() : "0 BTC";
+            var value = transaction.getValue(walletAppKit.wallet()).toFriendlyString();
+
+            var people = new ArrayList<WalletTransactions.Person>();
+
+            for (TransactionOutput output : transaction.getOutputs()) {
+                var address = Objects.requireNonNull(output.getAddressFromP2PKHScript(walletAppKit.params())).toString();
+                people.add(new WalletTransactions.Person(address, output.getValue().toFriendlyString()));
             }
 
-            for (TransactionOutput output : x.getOutputs()) {
-                String toAddress = output.getAddressFromP2PKHScript(walletAppKit.params()).toString();
-                System.out.println("Output to: " + toAddress);
-                System.out.println("Output Value: " + output.getValue().toFriendlyString());
-            }
+            var walletTransaction = WalletTransactions.builder()
+                    .id(transactionId.toString())
+                    .from(people.get(0))
+                    .to(people.get(1))
+                    .fee(fee)
+                    .date(transaction.getUpdateTime())
+                    .amount(value)
+                    .build();
+            walletTransactions.add(walletTransaction);
         }
 
 
-
-        return transactions;
+        return walletTransactions.stream()
+                .sorted(Comparator.comparing(WalletTransactions::date).reversed())
+                .collect(Collectors.toList());
     }
 
     @Override
     public WalletResponse info(User user) {
-        var coins = getBalance(user);
-        var bitcoins = ((double) coins.value)/ 100000000.0;
+        var bitcoins = getBalance(user).toFriendlyString();
 
         return WalletResponse.builder()
                 .address(user.getWalletAddress())
