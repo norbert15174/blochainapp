@@ -52,7 +52,7 @@ class UserLoginServiceImpl implements UserLoginService {
 
             var claims = jwtManageService.getClaims(refreshToken);
             var subject = JwtHelper.getSubject(claims);
-            var session = currentSessionCache.checkAndGetSession(subject, JwtHelper.getClientId(httpServletRequest));
+            var session = currentSessionCache.checkAndGetSession(subject);
 
             if (!jwtToken.startsWith(session.shortAccessToken())) {
                 throw new InvalidTokenException("Invalid access token");
