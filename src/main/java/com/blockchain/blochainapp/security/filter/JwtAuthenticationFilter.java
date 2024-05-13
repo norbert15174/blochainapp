@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         var claims = jwtManageService.getClaims(jwtToken);
         var subject = JwtHelper.getSubject(claims);
-        var session = currentSessionCache.checkAndGetSession(subject, JwtHelper.getClientId(request));
+        var session = currentSessionCache.checkAndGetSession(subject);
         var user = userQueryService.getOptByUsername(session.username())
                 .orElseThrow(() -> new JwtException("Cannot find user with username: " + session.username()));
         var authenticatedUser = new AuthenticatedUser(user);

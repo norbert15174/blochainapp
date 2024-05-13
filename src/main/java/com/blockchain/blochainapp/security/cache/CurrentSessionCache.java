@@ -29,16 +29,12 @@ public class CurrentSessionCache {
         sessions.put(subject, session);
     }
 
-    public SessionModel checkAndGetSession(String userId, String clientId) {
+    public SessionModel checkAndGetSession(String userId) {
         if (!sessions.containsKey(userId)) {
             throw new JwtException("Invalid tokenId");
         }
 
         var session = sessions.get(userId);
-        if (!Objects.equals(session.clientId(), clientId)) {
-            throw new JwtException("Invalid clientId");
-        }
-
         return session;
     }
 
