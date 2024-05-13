@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -23,6 +24,11 @@ class UserQueryServiceImpl implements UserQueryService {
     @Override
     public Optional<User> getOptByEmail(String email) {
         return userRepository.findByEmail(email.toLowerCase());
+    }
+
+    @Override
+    public List<User> getAll() {
+        return userRepository.findAll();
     }
 
     @Override
