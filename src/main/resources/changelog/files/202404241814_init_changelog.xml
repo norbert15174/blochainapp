@@ -57,16 +57,37 @@
             </column>
         </createTable>
         <addForeignKeyConstraint baseTableName="user_role" baseColumnNames="user_id"
-                                 constraintName="fk_user_role_user_id_fk" referencedTableName="users" referencedColumnNames="id"/>
+                                 constraintName="fk_user_role_user_id_fk" referencedTableName="users"
+                                 referencedColumnNames="id"/>
         <addForeignKeyConstraint baseTableName="user_role" baseColumnNames="role_id"
-                                 constraintName="fk_user_role_user_role_id_fk" referencedTableName="role" referencedColumnNames="id"/>
+                                 constraintName="fk_user_role_user_role_id_fk" referencedTableName="role"
+                                 referencedColumnNames="id"/>
     </changeSet>
 
     <changeSet id="202404241814-4" author="faronnor">
         <sql>
-            INSERT INTO role (name) VALUES ('ROLE_DEFAULT');
-            INSERT INTO role (name) VALUES ('ROLE_ADMIN');
+            INSERT INTO role (name)
+            VALUES ('ROLE_DEFAULT');
+            INSERT INTO role (name)
+            VALUES ('ROLE_ADMIN');
         </sql>
+    </changeSet>
+
+    <changeSet id="202404241814-5" author="faronnor">
+        <createTable tableName="blockchantransaction">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="source_address" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dest_address" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_address" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
     </changeSet>
 
 </databaseChangeLog>

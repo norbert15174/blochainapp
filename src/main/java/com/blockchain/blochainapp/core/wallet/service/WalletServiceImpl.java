@@ -4,9 +4,10 @@ package com.blockchain.blochainapp.core.wallet.service;
 import com.blockchain.blochainapp.api.wallet.model.WalletResponse;
 import com.blockchain.blochainapp.core.blockchain.config.BlockChainConfig;
 import com.blockchain.blochainapp.core.blockchain.model.BlockchainAppKit;
+import com.blockchain.blochainapp.core.wallet.domain.BlockChainTransaction;
 import com.blockchain.blochainapp.core.wallet.model.WalletTransactions;
+import com.blockchain.blochainapp.core.wallet.repository.BlockChainTransactionRepository;
 import com.blockchain.blochainapp.data.functionality.user.domain.User;
-import com.blockchain.blochainapp.data.functionality.user.service.UserCudService;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -26,7 +27,7 @@ public class WalletServiceImpl implements WalletService {
 
     private NetworkParameters networkParameters;
     private final BlockChainConfig blockChainConfig;
-    private final UserCudService userCudService;
+    private final BlockChainTransactionRepository blockChainTransactionRepository;
     private final Map<String, BlockchainAppKit> walletAppKits = new HashMap<>();
 
     @Override
@@ -38,7 +39,7 @@ public class WalletServiceImpl implements WalletService {
                     Coin value = tx.getValueSentToMe(wallet);
                     System.out.println("Received tx for " + value.toFriendlyString());
                     Futures.addCallback(tx.getConfidence().getDepthFuture(1),
-                            new FutureCallback<TransactionConfidence>() {
+                            new FutureCallback<>() {
                                 @Override
                                 public void onSuccess(TransactionConfidence result) {
                                     System.out.println("Received tx " +
@@ -51,7 +52,7 @@ public class WalletServiceImpl implements WalletService {
                             }, MoreExecutors.directExecutor());
                 });
 
-        Address walletAddress = LegacyAddress.fromKey(networkParameters, walletAppKit.wallet().currentReceiveKey());
+        var walletAddress = LegacyAddress.fromKey(networkParameters, walletAppKit.wallet().currentReceiveKey());
         user.setWalletAddress(walletAddress.toString());
         user.setPublicKey(walletAppKit.wallet().currentReceiveKey().getPublicKeyAsHex());
         walletAppKits.put(user.getUsername(), walletAppKit);
@@ -68,6 +69,8 @@ public class WalletServiceImpl implements WalletService {
             sendResult.broadcastComplete.addListener(() ->
                             System.out.println("Sent coins onwards! Transaction hash is " + sendResult.tx.getTxId()),
                     MoreExecutors.directExecutor());
+
+            createTransaction(user.getWalletAddress(), to, sendResult.tx.getTxId().toString());
         } catch (InsufficientMoneyException e) {
             throw new RuntimeException(e);
         }
@@ -86,33 +89,55 @@ public class WalletServiceImpl implements WalletService {
         var transactions = walletAppKit.wallet().getTransactions(false);
 
         var walletTransactions = new ArrayList<WalletTransactions>();
+        Coin walletBalance = Coin.ZERO;
         for (var transaction : transactions) {
             var transactionId = transaction.getTxId();
+            var transactionObject = blockChainTransactionRepository.findByTransactionAddress(transactionId.toString());
             var fee = Objects.nonNull(transaction.getFee()) ? transaction.getFee().toFriendlyString() : "0 BTC";
             var value = transaction.getValue(walletAppKit.wallet()).toFriendlyString();
 
             var people = new ArrayList<WalletTransactions.Person>();
 
             for (TransactionOutput output : transaction.getOutputs()) {
+                walletBalance = walletBalance.add(output.getValue());
                 var address = Objects.requireNonNull(output.getAddressFromP2PKHScript(walletAppKit.params())).toString();
-                people.add(new WalletTransactions.Person(address, output.getValue().toFriendlyString()));
+                people.add(new WalletTransactions.Person(address));
             }
 
+            System.out.println(walletBalance.toPlainString());
             var walletTransaction = WalletTransactions.builder()
                     .id(transactionId.toString())
-                    .from(people.get(0))
-                    .to(people.get(1))
+                    .from(getFrom(transactionObject, people.get(1)))
+                    .to(getTo(transactionObject, people.get(0)))
                     .fee(fee)
+                    .transferValue(Objects.nonNull(transaction.getFee())
+                            ? calcTransactionValue(walletAppKit, transaction)
+                            : transaction.getValue(walletAppKit.wallet()).toFriendlyString())
                     .date(transaction.getUpdateTime())
                     .amount(value)
                     .build();
             walletTransactions.add(walletTransaction);
         }
 
-
         return walletTransactions.stream()
                 .sorted(Comparator.comparing(WalletTransactions::date).reversed())
                 .collect(Collectors.toList());
+    }
+
+    private static String calcTransactionValue(BlockchainAppKit walletAppKit, Transaction transaction) {
+        if(transaction.getValue(walletAppKit.wallet()).isNegative()){
+            return transaction.getValue(walletAppKit.wallet()).plus(transaction.getFee()).toFriendlyString();
+        }
+
+        return transaction.getValue(walletAppKit.wallet()).minus(transaction.getFee()).toFriendlyString();
+    }
+
+    private WalletTransactions.Person getFrom(Optional<BlockChainTransaction> transactionObject, WalletTransactions.Person person) {
+        return transactionObject.map(blockChainTransaction -> new WalletTransactions.Person(blockChainTransaction.getSourceAddress())).orElse(person);
+    }
+
+    private WalletTransactions.Person getTo(Optional<BlockChainTransaction> transactionObject, WalletTransactions.Person person) {
+        return transactionObject.map(blockChainTransaction -> new WalletTransactions.Person(blockChainTransaction.getDestAddress())).orElse(person);
     }
 
     @Override
@@ -136,5 +161,14 @@ public class WalletServiceImpl implements WalletService {
         walletAppKits.put(user.getUsername(), walletAppKit);
         return walletAppKit;
     }
+
+    private void createTransaction(String from, String to, String transactionId) {
+        var transaction = new BlockChainTransaction();
+        transaction.setSourceAddress(from);
+        transaction.setDestAddress(to);
+        transaction.setTransactionAddress(transactionId);
+        blockChainTransactionRepository.save(transaction);
+    }
+
 
 }
